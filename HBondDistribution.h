@@ -26,7 +26,7 @@ class model: public gmx_reader
         // Nearest neighbor functions
         // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         float get_r( int mol1, int mol2 );
-        float get_b( int mol1, int mol2 );
+        float get_b( int mol1, int mol2, int whichH );
         int   get_rnx( float r );
         int   get_bnx( float b );
         int   get_nx( int rnx, int bnx );

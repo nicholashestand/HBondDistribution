@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <string.h>
 #include <stdio.h>
@@ -19,8 +20,7 @@ using namespace std;
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
 {
-
-    // set variables for this subclass
+// set variables for this subclass
     for ( int i = 0; i < nuParams; i ++ )
     {
         if ( uParams[i] == "db" )       db      = stof( uValues[i] );
@@ -74,30 +74,42 @@ float model::get_r( int mol1, int mol2 )
     return mag3( OOvec );
 }
 
-float model::get_b( int mol1, int mol2 )
+float model::get_b( int mol1, int mol2, int whichH )
 {
-    float OOvec[3], OH1vec[3], OH2vec[3];
+    float OOvec[3], OHvec[3];
     int i;
-    float beta1, beta2;
+    float beta;
+    float arg;
+
+    if ( whichH < 1 or whichH > 2 ){
+        cout << "Bad value for whichH: " << whichH << endl;
+        exit(1);
+    }
 
     // Return the OH-O angle between molecule 1 and 2
     // considers molecule 1 only as the H-bond acceptor
     for ( i = 0; i < 3; i ++ ) OOvec[i] = x[ mol2 * natoms_mol ][i] \
                                         - x[ mol1 * natoms_mol ][i];
+    minImage( OOvec );
 
     // get the OH vectors for the reference molecule
-    for ( i = 0; i < 3; i ++ ) OH1vec[i] = x[ mol1 * natoms_mol + 1 ][i] \
-                                         - x[ mol1 * natoms_mol ][i];
-    for ( i = 0; i < 3; i ++ ) OH2vec[i] = x[ mol1 * natoms_mol + 2 ][i] \
-                                         - x[ mol1 * natoms_mol ][i];
-    minImage( OH1vec );
-    minImage( OH2vec );
+    for ( i = 0; i < 3; i ++ ) OHvec[i] = x[ mol1 * natoms_mol + whichH ][i] \
+                                        - x[ mol1 * natoms_mol ][i];
+    minImage( OHvec );
 
     // return the minimum beta angle
-    beta1 = 180./PI*acos(dot3(OOvec,OH1vec)/(mag3(OOvec)*mag3(OH1vec)));
-    beta2 = 180./PI*acos(dot3(OOvec,OH2vec)/(mag3(OOvec)*mag3(OH2vec)));
-    return  min(beta1, beta2);
+    arg   = dot3(OOvec,OHvec)/(mag3(OOvec)*mag3(OHvec));
+    arg   = max( arg, (float) -1. ); arg = min( arg, (float) 1. );
+    if ( arg < -1 or arg > 1. ) cout << "WARNING: arg out of bounds" << endl;
+
+    beta  = 180./PI*acos(arg);
+    // i have to do this because acos has trouble with when the argument is 1, it returns nan
+    //if ( isnan(beta1) ) beta1 = 0.;
+
+    // return beta
+    return  beta;
 }
+
 int model::get_rnx( float r )
 {
     return round((r-r_min)/dr);
@@ -153,7 +165,7 @@ int main( int argc, char* argv[] )
 
     int currentSample, i, mol1, mol2, rnx, bnx, nx;
     long int kount;
-    float r, b;
+    float r, b1, b2;
 
     // Check program input
     if ( argc != 2 ){
@@ -173,25 +185,39 @@ int main( int argc, char* argv[] )
 
     // loop over trajectory
     for ( currentSample = 0; currentSample < reader.nsamples; currentSample ++ ){
-        cout << "\rCurrent time: " << reader.gmxtime << " (ps)";
+        cout << "\rCurrent time: " << reader.gmxtime << setprecision(2) << fixed <<  " (ps)";
         cout.flush();
 
         // calculate H-bond distribution of angles and distances 
         // loop over all pairs of molecules
         for ( mol1 = 0; mol1 < reader.nmol; mol1 ++ ){
             for ( mol2 = 0; mol2 < reader.nmol; mol2 ++ ){
+                if ( mol1 == mol2 ) continue;
+
+                // increment counter -- must divide at the end to get a probability -- each water has 2 OH angles
+                kount += 2;
+
                 // Get OO distance
                 r = reader.get_r( mol1, mol2 );
                 if ( r > reader.r_max or r < reader.r_min ) continue;
-                b = reader.get_b( mol1, mol2 );
-                if ( b > reader.b_max or b < reader.b_min ) continue;
 
-                rnx = reader.get_rnx( r );
-                bnx = reader.get_bnx( b );
-                nx  = reader.get_nx( rnx, bnx );
-                
-                reader.gbr[ nx ] += 1.;
-                kount += 1;
+                // Get Angle -- Hydrogen 1
+                b1 = reader.get_b( mol1, mol2, 1 );
+                if ( b1 < reader.b_max and b1 > reader.b_min ){
+                    rnx = reader.get_rnx( r );
+                    bnx = reader.get_bnx( b1 );
+                    nx  = reader.get_nx( rnx, bnx );
+                    reader.gbr[ nx ] += 1.;
+                }
+
+                // Get Angle -- Hydrogen 2
+                b2 = reader.get_b( mol1, mol2, 2 );
+                if ( b2 < reader.b_max and b2 > reader.b_min ){
+                    rnx = reader.get_rnx( r );
+                    bnx = reader.get_bnx( b2 );
+                    nx  = reader.get_nx( rnx, bnx );
+                    reader.gbr[ nx ] += 1.;
+                }
             }
         }
         // Advance to next frame if we need that frame
