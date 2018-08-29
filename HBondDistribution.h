@@ -14,8 +14,16 @@ class model: public gmx_reader
         float b_min=0., b_max=90;                               // max and min grid points in degree
         int npoints_r;                                          // total number of grid points
         int npoints_b;                                          // total number of grid points
-        double *gbr, *pmf;                                      // the probability distribution funciton
+        float rhbond;
+        float betahbond;
+        double *gbr, *pmf;                                      // the probability distribution function
+        bool *hbonded,*hbonded_t0,*hbonded_t;                   // boolean array to keep track of hbonds between pairs of molecules
+        float *hbondTCF;                                        // hydrogenbond correlation function
         string gbrfname="gbr.dat", pmffname="pmf.dat";          // filenames for outputs
+        string tcffname="hbondtcf.dat";                         // more filenames
+        int deltaTCFMax = 10;
+        float *rr, *bb1, *bb2;                                  // r, beta1, and beta 2 for each molecule
+        double *gbr_thb;                                        // instantaneous distribution at time t
 
     
         // Default constructor and destructor
@@ -32,6 +40,14 @@ class model: public gmx_reader
         int   get_nx( int rnx, int bnx );
         void  write_gbr( );
         void  write_pmf( );
+        void  write_hbond_tcf( );
+        bool  is_hbond( float r, float beta1, float beta2 );
+        void  write_hbond( int currentSample );
+        void  remove_hbond_files();
+        void  read_hbond_t0( int currentSample );
+        void  read_hbond_t( int currentSample );
+        float get_hbond_TCF( int deltaSample );
+        int   getarraynx( int mol1, int mol2 );
 
 };
 #endif
