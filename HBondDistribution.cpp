@@ -29,8 +29,10 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
         if ( uParams[i] == "rmax" )     r_max   = stof( uValues[i] );
         if ( uParams[i] == "bmin" )     b_min   = stof( uValues[i] );
         if ( uParams[i] == "bmax" )     b_max   = stof( uValues[i] );
-        if ( uParams[i] == "gbrname" )  gbrfname = uValues[i];
-        if ( uParams[i] == "pmfname" )  pmffname = uValues[i];
+        if ( uParams[i] == "gbrfname" )  gbrfname = uValues[i];
+        if ( uParams[i] == "gbrthbfname" )  gbrthbfname = uValues[i];
+        if ( uParams[i] == "pmffname" )  pmffname = uValues[i];
+        if ( uParams[i] == "tcffname" )  tcffname = uValues[i];
         if ( uParams[i] == "rhbond" )   rhbond   = stof(uValues[i]);
         if ( uParams[i] == "betahbond") betahbond= stof(uValues[i]);
         if ( uParams[i] == "deltaTCFMax" ) deltaTCFMax = stoi(uValues[i]);
@@ -42,8 +44,10 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
     cout << "Set rmax to: " << r_max << endl;
     cout << "Set bmin to: " << b_min << endl;
     cout << "Set bmax to: " << b_max << endl;
-    cout << "Set gbrname to: " << gbrfname << endl;
-    cout << "Set pmfname to: " << pmffname << endl;
+    cout << "Set gbrfname to: " << gbrfname << endl;
+    cout << "Set gbrthbfname to: " << gbrthbfname << endl;
+    cout << "Set pmffname to: " << pmffname << endl;
+    cout << "Set tcffname to: " << tcffname << endl;
     cout << "Set rhbond to: " << rhbond << endl;
     cout << "Set betahbond to: " << betahbond << endl;
 
@@ -65,7 +69,7 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
     rr      = new float[ nmol*nmol ];
     bb1     = new float[ nmol*nmol ];
     bb2     = new float[ nmol*nmol ];
-    gbr_thb = new double[npoints_b*npoints_r ];
+    gbr_thb = new double[npoints_b*npoints_r]();
 
 }
 
@@ -255,8 +259,11 @@ float model::get_hbond_TCF( int deltaTCF )
     int sample, nTCFsamples;
     int i, mol1, mol2;
     int rnx, bnx, nx, arraynx;
+    int kount;
     double ht = 0.;
+    float bb;
 
+    kount = 0;
     nTCFsamples = nsamples - deltaTCF; 
 
     //for ( i = 0; i < nmol*nmol; i ++ ) hbonded[i] = 0;
@@ -275,29 +282,57 @@ float model::get_hbond_TCF( int deltaTCF )
         // gbr(t|hb)
         for ( mol1 = 0; mol1 < nmol; mol1 ++ ){
             for ( mol2 = 0; mol2 < nmol; mol2 ++ ){
+                
+                if ( mol1 == mol2 ) continue;
+
+                kount += 2;
 
                 // get index for mol1 and mol2
                 arraynx = getarraynx( mol1, mol2 );
 
                 // get r
+                if ( rr [ arraynx ] > r_max or rr[ arraynx ] < r_min ) continue;
                 rnx = get_rnx( rr[ arraynx ] );
 
+                // it seems like in the other paper they consider only the beta of the hydrogen that is initially hydrogen bonded
+                // WARNING -- THIS MAY NOT QUITE BE RIGHT -- YOU MAY NEED TO THINK ABOUT THIS A LITTLE MORE
+                // It may be that you need to define hbonded_t0 not in terms of molecules, but in terms of specific OHO pairs.
+                bb = min( bb1[ arraynx ], bb2[ arraynx ] );
+                if ( bb <= b_max and bb >= b_min ){
+
+                    bnx = get_bnx( bb );
+                    nx  = get_nx( rnx, bnx );
+                    gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
+                }
+                /*
                 // hbond 1 - beta
-                bnx = get_bnx( bb1[arraynx ] );
-                nx  = get_nx( rnx, bnx );
-                gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
+                if ( bb1[ arraynx ] <= b_max and bb1[ arraynx ] >= b_min ){
+
+                    bnx = get_bnx( bb1[ arraynx ] );
+                    nx  = get_nx( rnx, bnx );
+                    gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
+                }
 
                 // hbond 2 - beta
-                bnx = get_bnx( bb2[arraynx ] );
-                nx  = get_nx( rnx, bnx );
-                gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
+                if ( bb2[ arraynx ] <= b_max and bb2[ arraynx ] >= b_min ){
+
+                    bnx = get_bnx( bb2[ arraynx ] );
+                    nx  = get_nx( rnx, bnx );
+                    gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
+                }
+                */
             }
         }
     }
 
     // Normalization
     ht /= 1.*nTCFsamples;
-    for ( i = 0; i < npoints_r*npoints_b; i ++ ) gbr_thb[i] /= 1.*nTCFsamples*gbr[i];
+    //for ( i = 0; i < npoints_r*npoints_b; i ++ ) gbr_thb[i] /= 1.*nTCFsamples*gbr[i];
+    for ( i = 0; i < npoints_r*npoints_b; i ++ ) gbr_thb[i] /= 1.*kount*gbr[i];
+
+
+    // may include option to write only certian ones that you want, but for now this is ok
+    write_gbr_thb( deltaTCF );
 
     return ht;
 }
@@ -316,10 +351,27 @@ void model::write_hbond_tcf()
     fclose( file );
 }
 
+void model::write_gbr_thb( int deltaTCF )
+{
+    int rnx, bnx, nx;
+
+    string fname = gbrthbfname+"-"+to_string(deltaTCF)+".dat";
+    FILE *file = fopen(fname.c_str(),"w");
+    fprintf( file, "#Time: %g\n", deltaTCF*sampleEvery );
+    fprintf( file, "#R (nm) Beta (deg) g(R,Beta,t)\n");
+
+    for ( rnx = 0; rnx < npoints_r; rnx ++ ){
+        for ( bnx = 0; bnx < npoints_b; bnx ++ ){
+            nx = get_nx( rnx, bnx );
+            fprintf( file, "%g %g %g\n", r_min + rnx*dr + dr/2., b_min + bnx*db + db/2., gbr_thb[ nx ]);
+        }
+    }
+    fclose( file );
+}
 
 
 
-
+// ************************************************************************ 
 int main( int argc, char* argv[] )
 {
 
@@ -403,6 +455,17 @@ int main( int argc, char* argv[] )
         if ( currentSample != reader.nsamples - 1 ) reader.search_for_sample( currentSample + 1 );
     } 
 
+    // normalize the probability distribution function and calculate the PMF
+    for ( rnx = 0; rnx < reader.npoints_r; rnx ++ ){
+        for ( bnx = 0; bnx < reader.npoints_b; bnx ++ ){
+            nx = reader.get_nx( rnx, bnx );
+            reader.gbr[ nx ] /= kount*1.;
+
+            // note that the PMF is normalized by kT here
+            reader.pmf[ nx ] = -1.*log(reader.gbr[nx]);
+        }
+    }
+
     // now calculate the h-bond correlation function
     for ( int deltaSample = 0; deltaSample < reader.deltaTCFMax; deltaSample ++ )
     {
@@ -414,21 +477,9 @@ int main( int argc, char* argv[] )
         }
         reader.hbondTCF[deltaSample] /= ht0;
 
-        // here write out the gbr_thb files that you want -- since each time has a matrix, it makes sense to only write out the ones you want
     }
     // remove hbond matrix scratch files
     reader.remove_hbond_files();
-
-    // normalize the probability distribution function and calculate the PMF
-    for ( rnx = 0; rnx < reader.npoints_r; rnx ++ ){
-        for ( bnx = 0; bnx < reader.npoints_b; bnx ++ ){
-            nx = reader.get_nx( rnx, bnx );
-            reader.gbr[ nx ] /= kount*1.;
-
-            // note that the PMF is normalized by kT here
-            reader.pmf[ nx ] = -1.*log(reader.gbr[nx]);
-        }
-    }
 
     // write the probability distribution function and pmfs to a file
     reader.write_gbr();

@@ -21,6 +21,7 @@ class model: public gmx_reader
         float *hbondTCF;                                        // hydrogenbond correlation function
         string gbrfname="gbr.dat", pmffname="pmf.dat";          // filenames for outputs
         string tcffname="hbondtcf.dat";                         // more filenames
+        string gbrthbfname="gbr_thb";                           // filename to prepend to gbr_thb output files
         int deltaTCFMax = 10;
         float *rr, *bb1, *bb2;                                  // r, beta1, and beta 2 for each molecule
         double *gbr_thb;                                        // instantaneous distribution at time t
@@ -39,6 +40,7 @@ class model: public gmx_reader
         int   get_bnx( float b );
         int   get_nx( int rnx, int bnx );
         void  write_gbr( );
+        void  write_gbr_thb( int deltaTCF );
         void  write_pmf( );
         void  write_hbond_tcf( );
         bool  is_hbond( float r, float beta1, float beta2 );
