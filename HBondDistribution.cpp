@@ -50,26 +50,26 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
     cout << "Set tcffname to: " << tcffname << endl;
     cout << "Set rhbond to: " << rhbond << endl;
     cout << "Set betahbond to: " << betahbond << endl;
+    cout << "Set deltaTCFMax to: " << deltaTCFMax << endl;
 
-    //  make sure deltaTCFMax is okay
+    //  make sure deltaTCFMax is okay -- adjust if you need to
     deltaTCFMax = min(deltaTCFMax,nsamples);
-
 
     // allocate space for nearest neighbor classifications
     npoints_r    = (int) round( (r_max-r_min)/dr + 1);           // total number of grid points
     npoints_b    = (int) round( (b_max-b_min)/db + 1);           // total number of grid points
 
     // the array for the H-bond distribution function
-    gbr    = new double[npoints_b*npoints_r]();
-    pmf    = new double[npoints_b*npoints_r]();
-    hbonded= new bool[nmol*nmol]();
-    hbonded_t0= new bool[nmol*nmol]();
-    hbonded_t = new bool[nmol*nmol]();
-    hbondTCF = new float[deltaTCFMax];
-    rr      = new float[ nmol*nmol ];
-    bb1     = new float[ nmol*nmol ];
-    bb2     = new float[ nmol*nmol ];
-    gbr_thb = new double[npoints_b*npoints_r]();
+    gbr         = new double[npoints_b*npoints_r]();
+    pmf         = new double[npoints_b*npoints_r]();
+    hbonded     = new bool[nmol*nmol]();
+    hbonded_t0  = new bool[nmol*nmol]();
+    hbonded_t   = new bool[nmol*nmol]();
+    hbondTCF    = new float[deltaTCFMax]();
+    rr          = new float[ nmol*nmol ]();
+    bb1         = new float[ nmol*nmol ]();
+    bb2         = new float[ nmol*nmol ]();
+    gbr_thb     = new double[npoints_b*npoints_r]();
 
 }
 
@@ -126,14 +126,13 @@ float model::get_b( int mol1, int mol2, int whichH )
                                         - x[ mol1 * natoms_mol ][i];
     minImage( OHvec );
 
-    // return the minimum beta angle
+    // determine beta
     arg   = dot3(OOvec,OHvec)/(mag3(OOvec)*mag3(OHvec));
+    // note acos is only defined when the argument is between zero and 1 -- this next line makes sure
+    // the program doesnt break due to numerical errors that cause the argument to go slightly over 1 or slightly below -1
     arg   = max( arg, (float) -1. ); arg = min( arg, (float) 1. );
     if ( arg < -1 or arg > 1. ) cout << "WARNING: arg out of bounds" << endl;
-
     beta  = 180./PI*acos(arg);
-    // i have to do this because acos has trouble with when the argument is 1, it returns nan
-    //if ( isnan(beta1) ) beta1 = 0.;
 
     // return beta
     return  beta;
@@ -165,7 +164,6 @@ void model::write_gbr()
         for ( bnx = 0; bnx < npoints_b; bnx ++ ){
             nx = get_nx( rnx, bnx );
             fprintf( file, "%g %g %g\n", r_min + rnx*dr + dr/2., b_min + bnx*db + db/2., gbr[ nx ]);
-
         }
     }
     fclose( file );
@@ -182,7 +180,6 @@ void model::write_pmf()
         for ( bnx = 0; bnx < npoints_b; bnx ++ ){
             nx = get_nx( rnx, bnx );
             fprintf( file, "%g %g %g\n", r_min + rnx*dr + dr/2., b_min + bnx*db + db/2., pmf[ nx ]);
-
         }
     }
     fclose( file );
@@ -198,7 +195,6 @@ bool model::is_hbond( float r, float beta1, float beta2 )
     float beta;
 
     // hbond condition is r<rhbond, beta<betahbond
-
     if ( r > rhbond ) return false;
 
     // only the minimum beta will be relevant here
@@ -266,7 +262,6 @@ float model::get_hbond_TCF( int deltaTCF )
     kount = 0;
     nTCFsamples = nsamples - deltaTCF; 
 
-    //for ( i = 0; i < nmol*nmol; i ++ ) hbonded[i] = 0;
     for ( i = 0; i < npoints_r*npoints_b; i ++ ) gbr_thb[i] = 0.;
 
     for ( sample = 0; sample < nTCFsamples; sample ++ )
@@ -304,32 +299,13 @@ float model::get_hbond_TCF( int deltaTCF )
                     nx  = get_nx( rnx, bnx );
                     gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
                 }
-                /*
-                // hbond 1 - beta
-                if ( bb1[ arraynx ] <= b_max and bb1[ arraynx ] >= b_min ){
-
-                    bnx = get_bnx( bb1[ arraynx ] );
-                    nx  = get_nx( rnx, bnx );
-                    gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
-                }
-
-                // hbond 2 - beta
-                if ( bb2[ arraynx ] <= b_max and bb2[ arraynx ] >= b_min ){
-
-                    bnx = get_bnx( bb2[ arraynx ] );
-                    nx  = get_nx( rnx, bnx );
-                    gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
-                }
-                */
             }
         }
     }
 
     // Normalization
     ht /= 1.*nTCFsamples;
-    //for ( i = 0; i < npoints_r*npoints_b; i ++ ) gbr_thb[i] /= 1.*nTCFsamples*gbr[i];
     for ( i = 0; i < npoints_r*npoints_b; i ++ ) gbr_thb[i] /= 1.*kount*gbr[i];
-
 
     // may include option to write only certian ones that you want, but for now this is ok
     write_gbr_thb( deltaTCF );
@@ -418,7 +394,6 @@ int main( int argc, char* argv[] )
                 arraynx = reader.getarraynx( mol1, mol2 );
                 // mol1 * reader.nmol + mol2
                 reader.rr[ arraynx ] = reader.get_r( mol1, mol2 );
-                //if ( reader.rr[arraynx] > reader.r_max or reader.rr[arraynx] < reader.r_min ) continue;
 
                 // Get Angle -- Hydrogen 1
                 reader.bb1[ arraynx ] = reader.get_b( mol1, mol2, 1 );
