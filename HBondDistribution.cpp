@@ -255,11 +255,9 @@ float model::get_hbond_TCF( int deltaTCF )
     int sample, nTCFsamples;
     int i, mol1, mol2;
     int rnx, bnx, nx, arraynx;
-    int kount;
     double ht = 0.;
     float bb;
 
-    kount = 0;
     nTCFsamples = nsamples - deltaTCF; 
 
     for ( i = 0; i < npoints_r*npoints_b; i ++ ) gbr_thb[i] = 0.;
@@ -280,8 +278,6 @@ float model::get_hbond_TCF( int deltaTCF )
                 
                 if ( mol1 == mol2 ) continue;
 
-                kount += 2;
-
                 // get index for mol1 and mol2
                 arraynx = getarraynx( mol1, mol2 );
 
@@ -289,13 +285,28 @@ float model::get_hbond_TCF( int deltaTCF )
                 if ( rr [ arraynx ] > r_max or rr[ arraynx ] < r_min ) continue;
                 rnx = get_rnx( rr[ arraynx ] );
 
-                // it seems like in the other paper they consider only the beta of the hydrogen that is initially hydrogen bonded
-                // WARNING -- THIS MAY NOT QUITE BE RIGHT -- YOU MAY NEED TO THINK ABOUT THIS A LITTLE MORE
-                // It may be that you need to define hbonded_t0 not in terms of molecules, but in terms of specific OHO pairs.
+                // WARNING: It is not clear if in the paper they consider both hydrogens when calculating gbr(t|HB) or just the one that is initially hydrogen bonded
+                /*
                 bb = min( bb1[ arraynx ], bb2[ arraynx ] );
                 if ( bb <= b_max and bb >= b_min ){
 
                     bnx = get_bnx( bb );
+                    nx  = get_nx( rnx, bnx );
+                    gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
+                }
+                */
+                
+                // WARNING: These give very different results... this probably needs to be addressed
+                // Consider both hydrogens
+                // Hydrogen 1
+                if ( bb1[ arraynx ] <= b_max and bb1[ arraynx ] >= b_min ){
+                    bnx = get_bnx( bb1[ arraynx ] );
+                    nx  = get_nx( rnx, bnx );
+                    gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
+                }
+                // Hydrogen 2
+                if ( bb2[ arraynx ] <= b_max and bb2[ arraynx ] >= b_min ){
+                    bnx = get_bnx( bb2[ arraynx ] );
                     nx  = get_nx( rnx, bnx );
                     gbr_thb[ nx ] += 1. * hbonded_t0[ arraynx ];
                 }
@@ -305,7 +316,8 @@ float model::get_hbond_TCF( int deltaTCF )
 
     // Normalization
     ht /= 1.*nTCFsamples;
-    for ( i = 0; i < npoints_r*npoints_b; i ++ ) gbr_thb[i] /= 1.*kount*gbr[i];
+    for ( i = 0; i < npoints_r*npoints_b; i ++ ) gbr_thb[i] /= 1.*gbr[i];
+
 
     // may include option to write only certian ones that you want, but for now this is ok
     write_gbr_thb( deltaTCF );
@@ -352,9 +364,9 @@ int main( int argc, char* argv[] )
 {
 
     int currentSample, i, mol1, mol2, rnx, bnx, nx, arraynx;
-    long int kount;
-    float r, b1, b2;
-    float ht0;
+    float r, b1, b2, b;
+    float ht0, NHB;
+    float rho=0;
 
     // Check program input
     if ( argc != 2 ){
@@ -369,9 +381,6 @@ int main( int argc, char* argv[] )
     // attempt to initialize reading of gmx file
     model reader( inpf );
 
-    // count the number of points taken
-    kount = 0;
-
     // loop over trajectory
     for ( currentSample = 0; currentSample < reader.nsamples; currentSample ++ ){
         cout << "\rCurrent time: " << reader.gmxtime << setprecision(2) << fixed <<  " (ps)";
@@ -379,6 +388,9 @@ int main( int argc, char* argv[] )
 
         // reset hbond array
         memset( reader.hbonded, false, reader.nmol*reader.nmol*sizeof(bool));
+
+        // calculate average density in molecules/nm
+        rho += reader.nmol / (reader.box[0][0] * reader.box[1][1] * reader.box[2][2] ) / reader.nsamples ;
         
         // calculate H-bond distribution of angles and distances 
         // loop over all pairs of molecules
@@ -386,9 +398,6 @@ int main( int argc, char* argv[] )
             for ( mol2 = 0; mol2 < reader.nmol; mol2 ++ ){
 
                 if ( mol1 == mol2 ) continue;
-
-                // increment counter -- must divide at the end to get a probability -- each water has 2 OH angles
-                kount += 2;
 
                 // Get OO distance
                 arraynx = reader.getarraynx( mol1, mol2 );
@@ -430,18 +439,8 @@ int main( int argc, char* argv[] )
         if ( currentSample != reader.nsamples - 1 ) reader.search_for_sample( currentSample + 1 );
     } 
 
-    // normalize the probability distribution function and calculate the PMF
-    for ( rnx = 0; rnx < reader.npoints_r; rnx ++ ){
-        for ( bnx = 0; bnx < reader.npoints_b; bnx ++ ){
-            nx = reader.get_nx( rnx, bnx );
-            reader.gbr[ nx ] /= kount*1.;
-
-            // note that the PMF is normalized by kT here
-            reader.pmf[ nx ] = -1.*log(reader.gbr[nx]);
-        }
-    }
-
-    // now calculate the h-bond correlation function
+    // calculate the h-bond correlation function -- do this before 
+    // normalization of gbr so you dont have to worry about that in the calculation of gbr(t|HB)
     for ( int deltaSample = 0; deltaSample < reader.deltaTCFMax; deltaSample ++ )
     {
         cout << "\rNow calculating hbond TCF at t= " << deltaSample*reader.sampleEvery << " (ps)";
@@ -455,6 +454,34 @@ int main( int argc, char* argv[] )
     }
     // remove hbond matrix scratch files
     reader.remove_hbond_files();
+
+    NHB = 0;
+    // normalize the probability distribution function and calculate the PMF
+    for ( rnx = 0; rnx < reader.npoints_r; rnx ++ ){
+        for ( bnx = 0; bnx < reader.npoints_b; bnx ++ ){
+            nx = reader.get_nx( rnx, bnx );
+
+            // normalize by the number of samples and the number of molecules
+            reader.gbr[ nx ] /= reader.nsamples*reader.nmol*1.;
+
+            // normalize by the "area" of each gridpoint -- take the center of each r, beta grid point.
+            r = rnx * reader.dr + reader.r_min + reader.dr/2.;
+            b = bnx * reader.db + reader.b_min + reader.db/2.;
+            reader.gbr[ nx ] /= 2. * PI * rho * r * r * sin( b * PI/180. ) * reader.dr * ( reader.db * PI / 180. );
+
+            // integrate GBR over the h-bond region to find average number of hydrogen bonds
+            if ( r <= reader.rhbond and b <= reader.betahbond ){
+                NHB += 2. * PI * rho * r * r * sin( b * PI/180. ) \
+                       * reader.gbr[ nx ] * reader.dr * ( reader.db * PI / 180. );
+            }
+
+            // note that the PMF is normalized by kT here
+            reader.pmf[ nx ] = -1.*log(reader.gbr[nx]);
+        }
+    }
+
+    cout << "\nThe density is " << rho << " molecules/nm3." << endl;
+    cout << "The average number of hydrogen bonds is: " << NHB << setprecision(6) << endl;
 
     // write the probability distribution function and pmfs to a file
     reader.write_gbr();
