@@ -261,7 +261,7 @@ void model::get_hbond_dynamics( int deltaTCF )
 {
     int sample, nTCFsamples, i;
     int rnx, bnx, nx, rrnx, bbnx, mol1, mol2;
-    float beta, r, b;
+    float beta, r;
 
     // Determine number of samples to take
     nTCFsamples = nsamples - deltaTCF; 
@@ -295,70 +295,45 @@ void model::get_hbond_dynamics( int deltaTCF )
                 rrnx = getrrnx( mol1, mol2 );
 
                 // get r
-                if ( rr [ rrnx ] > r_max or rr[ rrnx ] < r_min ) continue;
-                rnx = get_rnx( rr[ rrnx ] );
+                r = rr[ rrnx ];
+                if ( r > r_max or r < r_min ) continue;
+                rnx = get_rnx( r );
 
                 // hydrogen 1
                 bbnx = getbbnx( mol1, mol2, 1 );
                 beta = bb[ bbnx ];
-                if ( beta <= b_max and beta >= b_min ){
-                    bnx = get_bnx( beta );
-                    nx  = get_nx( rnx, bnx );
-                    gbr_thb[ nx ] += 1. * hbonded_t0[ bbnx ];
-                }
+                bnx = get_bnx( beta );
+                nx  = get_nx( rnx, bnx );
+                if ( beta <= b_max and beta >= b_min ) gbr_thb[ nx ] += 1. * hbonded_t0[ bbnx ];
+                if ( r <= rhbond_max and r >= rhbond_min  and beta <= betahbond_max and beta >= betahbond_min ) NHBt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r >= rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r <= rhbond_max and r >= rhbond_min  and beta >= betahbond_max and beta <= betahbond_maxR ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
 
                 // hydrogen 2
                 bbnx = getbbnx( mol1, mol2, 2 );
                 beta = bb[ bbnx ];
-                if ( beta <= b_max and beta >= b_min ){
-                    bnx = get_bnx( beta );
-                    nx  = get_nx( rnx, bnx );
-                    gbr_thb[ nx ] += 1. * hbonded_t0[ bbnx ];
-                }
+                bnx = get_bnx( beta );
+                nx  = get_nx( rnx, bnx );
+                if ( beta <= b_max and beta >= b_min ) gbr_thb[ nx ] += 1. * hbonded_t0[ bbnx ];
+                if ( r <= rhbond_max and r >= rhbond_min  and beta <= betahbond_max and beta >= betahbond_min ) NHBt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r >= rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r <= rhbond_max and r >= rhbond_min  and beta >= betahbond_max and beta <= betahbond_maxR ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
             }
         }
     }
 
-
     // normalization
     // hbondTCF is just normalized by the number of TCF samples
     hbondTCF[ deltaTCF ] /= 1.*nTCFsamples;
-    
+    NHBt[ deltaTCF ]     /= 1.*nTCFsamples*nmol;
+    NRt[ deltaTCF ]      /= 1.*nTCFsamples*nmol;
+    NTt[ deltaTCF ]      /= 1.*nTCFsamples*nmol;
+
     // gbr_thb is normalized by gbr, but the number of samples must be the same for each
     for ( i = 0; i < npoints_r*npoints_b; i ++ ){
         // need to be careful here because if gbr[i] == 0, then gbr_thb will also be zero, but the division will be undefined
         if ( gbr[i] == 0 ) continue;
         else gbr_thb[i] /= 1.*gbr[i]*nTCFsamples/(1.*nsamples);
-    }
-
-
-    // get NHBt, NRt, and NTt
-    // integrate over the different regions to find the average number at time t
-    for ( rnx = 0; rnx < npoints_r; rnx ++ ){
-        for ( bnx = 0; bnx < npoints_b; bnx ++ ){
-            nx = get_nx( rnx, bnx );
-
-            r = rnx * dr + r_min + dr/2.;
-            b = bnx * db + b_min + db/2.;
-
-            // NHBt
-            if ( r <= rhbond_max and r >= rhbond_min and \
-                    b <= betahbond_max and b >= betahbond_min ){
-                        NHBt[ deltaTCF ] += gbr_thb[ nx ];
-            }
-
-            // NRt
-            if ( r <= rhbond_max and r >= rhbond_min and \
-                    b >  betahbond_max and b <= betahbond_maxR ){
-                        NRt[ deltaTCF ] += gbr_thb[ nx ];
-            }
-
-            // NTt
-            if ( r > rhbond_max and r <= rhbond_maxT and \
-                    b <= betahbond_max and b >= betahbond_min ){
-                        NTt[ deltaTCF ] += gbr_thb[ nx ];
-            }
-        }
     }
 
     // may include option to write only certian ones that you want, but for now this is ok
