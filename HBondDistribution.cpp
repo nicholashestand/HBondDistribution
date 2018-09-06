@@ -306,8 +306,8 @@ void model::get_hbond_dynamics( int deltaTCF )
                 nx  = get_nx( rnx, bnx );
                 if ( beta <= b_max and beta >= b_min ) gbr_thb[ nx ] += 1. * hbonded_t0[ bbnx ];
                 if ( r <= rhbond_max and r >= rhbond_min  and beta <= betahbond_max and beta >= betahbond_min ) NHBt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
-                if ( r >= rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
-                if ( r <= rhbond_max and r >= rhbond_min  and beta >= betahbond_max and beta <= betahbond_maxR ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r >  rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r <= rhbond_max and r >= rhbond_min  and beta >  betahbond_max and beta <= betahbond_maxR ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
 
                 // hydrogen 2
                 bbnx = getbbnx( mol1, mol2, 2 );
@@ -316,8 +316,8 @@ void model::get_hbond_dynamics( int deltaTCF )
                 nx  = get_nx( rnx, bnx );
                 if ( beta <= b_max and beta >= b_min ) gbr_thb[ nx ] += 1. * hbonded_t0[ bbnx ];
                 if ( r <= rhbond_max and r >= rhbond_min  and beta <= betahbond_max and beta >= betahbond_min ) NHBt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
-                if ( r >= rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
-                if ( r <= rhbond_max and r >= rhbond_min  and beta >= betahbond_max and beta <= betahbond_maxR ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r >  rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r <= rhbond_max and r >= rhbond_min  and beta >  betahbond_max and beta <= betahbond_maxR ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
             }
         }
     }
