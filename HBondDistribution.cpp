@@ -306,8 +306,8 @@ void model::get_hbond_dynamics( int deltaTCF )
                 nx  = get_nx( rnx, bnx );
                 if ( beta <= b_max and beta >= b_min ) gbr_thb[ nx ] += 1. * hbonded_t0[ bbnx ];
                 if ( r <= rhbond_max and r >= rhbond_min  and beta <= betahbond_max and beta >= betahbond_min ) NHBt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
-                if ( r >= rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
-                if ( r <= rhbond_max and r >= rhbond_min  and beta >= betahbond_max and beta <= betahbond_maxR ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r >= rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r <= rhbond_max and r >= rhbond_min  and beta >= betahbond_max and beta <= betahbond_maxR ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
 
                 // hydrogen 2
                 bbnx = getbbnx( mol1, mol2, 2 );
@@ -316,8 +316,8 @@ void model::get_hbond_dynamics( int deltaTCF )
                 nx  = get_nx( rnx, bnx );
                 if ( beta <= b_max and beta >= b_min ) gbr_thb[ nx ] += 1. * hbonded_t0[ bbnx ];
                 if ( r <= rhbond_max and r >= rhbond_min  and beta <= betahbond_max and beta >= betahbond_min ) NHBt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
-                if ( r >= rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
-                if ( r <= rhbond_max and r >= rhbond_min  and beta >= betahbond_max and beta <= betahbond_maxR ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r >= rhbond_max and r <= rhbond_maxT and beta <= betahbond_max and beta >= betahbond_min ) NTt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
+                if ( r <= rhbond_max and r >= rhbond_min  and beta >= betahbond_max and beta <= betahbond_maxR ) NRt[ deltaTCF ] += 1. * hbonded_t0[ bbnx ];
             }
         }
     }
@@ -348,10 +348,15 @@ void model::write_hbond_tcf()
     FILE *file = fopen(tcffname.c_str(),"w");
     fprintf( file, "#t (ns) hbond TCF\n");
 
-    for ( deltaTCF = 0; deltaTCF < deltaTCFMax; deltaTCF ++ )
-    {
+    deltaTCF = 0;
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, hbondTCF[deltaTCF] );
+    for ( int power = 0; power < 1000; power ++ ){
+        if ( pow(10,power*.1) > deltaTCFMax ) break;
+        deltaTCF = (int) round(pow(10,power*.1));
+        if ( deltaTCF > deltaTCFMax ) break;
         fprintf( file, "%g %g \n", deltaTCF*sampleEvery, hbondTCF[deltaTCF] );
     }
+
     fclose( file );
 }
 
@@ -362,10 +367,15 @@ void model::write_hbond_prt()
     FILE *file = fopen(prfname.c_str(),"w");
     fprintf( file, "#t (ns) hbond P_R\n");
 
-    for ( deltaTCF = 0; deltaTCF < deltaTCFMax; deltaTCF ++ )
-    {
+    deltaTCF = 0;
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, hbondTCF[deltaTCF] );
+    for ( int power = 0; power < 1000; power ++ ){
+        if ( pow(10,power*.1) > deltaTCFMax ) break;
+        deltaTCF = (int) round(pow(10,power*.1));
+        if ( deltaTCF > deltaTCFMax ) break;
         fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NRt[deltaTCF]/NHBt[0] );
     }
+
     fclose( file );
 }
 
@@ -376,10 +386,15 @@ void model::write_hbond_ptt()
     FILE *file = fopen(ptfname.c_str(),"w");
     fprintf( file, "#t (ns) hbond P_T\n");
 
-    for ( deltaTCF = 0; deltaTCF < deltaTCFMax; deltaTCF ++ )
-    {
+    deltaTCF = 0;
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, hbondTCF[deltaTCF] );
+    for ( int power = 0; power < 1000; power ++ ){
+        if ( pow(10,power*.1) > deltaTCFMax ) break;
+        deltaTCF = (int) round(pow(10,power*.1));
+        if ( deltaTCF > deltaTCFMax ) break;
         fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NTt[deltaTCF]/NHBt[0] );
     }
+
     fclose( file );
 }
 
@@ -390,10 +405,15 @@ void model::write_hbond_phbt()
     FILE *file = fopen(phbfname.c_str(),"w");
     fprintf( file, "#t (ns) hbond P_HB\n");
 
-    for ( deltaTCF = 0; deltaTCF < deltaTCFMax; deltaTCF ++ )
-    {
+    deltaTCF = 0;
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, hbondTCF[deltaTCF] );
+    for ( int power = 0; power < 1000; power ++ ){
+        if ( pow(10,power*.1) > deltaTCFMax ) break;
+        deltaTCF = (int) round(pow(10,power*.1));
+        if ( deltaTCF > deltaTCFMax ) break;
         fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NHBt[deltaTCF]/NHBt[0] );
     }
+
     fclose( file );
 }
 
@@ -503,11 +523,19 @@ int main( int argc, char* argv[] )
 
     // calculate the h-bond correlation function -- do this before 
     // normalization of gbr so you dont have to worry about that in the calculation of gbr(t|HB)
-    for ( int deltaSample = 0; deltaSample < reader.deltaTCFMax; deltaSample ++ )
-    {
-        cout << "\rNow calculating dynamics at t= " << deltaSample*reader.sampleEvery << " (ps)";
-        cout.flush();
-        reader.get_hbond_dynamics( deltaSample );
+    int deltaSample = 0;
+    cout << "\nNow calculating dynamics at t= " << deltaSample*reader.sampleEvery << " (ps)";
+    cout.flush();
+    reader.get_hbond_dynamics( deltaSample );
+    // after calculating at time 0, just calculate on a log scale
+    for ( int power = 0; power < 1000; power ++ ){
+        if ( pow(10,power*.1) > reader.deltaTCFMax ) break;
+            deltaSample = (int) round(pow(10,power*.1));
+
+            if ( deltaSample > reader.deltaTCFMax ) break;
+            cout << "\rNow calculating dynamics at t= " << deltaSample*reader.sampleEvery << " (ps)";
+            cout.flush();
+            reader.get_hbond_dynamics( deltaSample );
     }
     
     // remove hbond matrix scratch files
@@ -515,7 +543,6 @@ int main( int argc, char* argv[] )
     
     // normalize hbond tcf
     for ( int i = reader.deltaTCFMax; i > 0; i -- ) reader.hbondTCF[i-1] /= reader.hbondTCF[0];
-
 
     NHB = 0;
     // normalize the probability distribution function, calculate the PMF, and the average number of Hbond acceptors
