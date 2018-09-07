@@ -76,10 +76,10 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
     hbonded     = new bool[nmol*nmol*2]();
     hbonded_t0  = new bool[nmol*nmol*2]();
     hbonded_t   = new bool[nmol*nmol*2]();
-    hbondTCF    = new float[deltaTCFMax]();
-    NHBt        = new float[deltaTCFMax]();
-    NRt         = new float[deltaTCFMax]();
-    NTt         = new float[deltaTCFMax]();
+    hbondTCF    = new double[deltaTCFMax]();
+    NHBt        = new double[deltaTCFMax]();
+    NRt         = new double[deltaTCFMax]();
+    NTt         = new double[deltaTCFMax]();
     rr          = new float[ nmol*nmol ]();
     bb          = new float[ nmol*nmol*2 ]();
     gbr_thb     = new double[npoints_b*npoints_r]();
