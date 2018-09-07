@@ -323,8 +323,6 @@ void model::get_hbond_dynamics( int deltaTCF )
     }
 
     // normalization
-    // hbondTCF is just normalized by the number of TCF samples
-    hbondTCF[ deltaTCF ] /= 1.*nTCFsamples;
     NHBt[ deltaTCF ]     /= 1.*nTCFsamples*nmol;
     NRt[ deltaTCF ]      /= 1.*nTCFsamples*nmol;
     NTt[ deltaTCF ]      /= 1.*nTCFsamples*nmol;
@@ -368,7 +366,7 @@ void model::write_hbond_prt()
     fprintf( file, "#t (ns) hbond P_R\n");
 
     deltaTCF = 0;
-    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, hbondTCF[deltaTCF] );
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NRt[deltaTCF] );
     for ( int power = 0; power < 1000; power ++ ){
         if ( pow(10,power*.1) > deltaTCFMax ) break;
         deltaTCF = (int) round(pow(10,power*.1));
@@ -387,7 +385,7 @@ void model::write_hbond_ptt()
     fprintf( file, "#t (ns) hbond P_T\n");
 
     deltaTCF = 0;
-    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, hbondTCF[deltaTCF] );
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NTt[deltaTCF] );
     for ( int power = 0; power < 1000; power ++ ){
         if ( pow(10,power*.1) > deltaTCFMax ) break;
         deltaTCF = (int) round(pow(10,power*.1));
@@ -406,7 +404,7 @@ void model::write_hbond_phbt()
     fprintf( file, "#t (ns) hbond P_HB\n");
 
     deltaTCF = 0;
-    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, hbondTCF[deltaTCF] );
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NHBt[deltaTCF] );
     for ( int power = 0; power < 1000; power ++ ){
         if ( pow(10,power*.1) > deltaTCFMax ) break;
         deltaTCF = (int) round(pow(10,power*.1));
