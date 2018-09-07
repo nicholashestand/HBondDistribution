@@ -230,8 +230,6 @@ void model::read_hbond_t0(int currentSample)
     string fname = ".hbond-" + to_string(currentSample) + ".dat";
     FILE *file = fopen( fname.c_str(),"rb");
     fread( hbonded_t0, sizeof(bool), nmol*nmol*2, file );
-    fread( rr  , sizeof(float), nmol*nmol, file );
-    fread( bb , sizeof(float), nmol*nmol*2, file );
     fclose( file );
 }
 
@@ -322,11 +320,6 @@ void model::get_hbond_dynamics( int deltaTCF )
         }
     }
 
-    // normalization
-    NHBt[ deltaTCF ]     /= 1.*nTCFsamples*nmol;
-    NRt[ deltaTCF ]      /= 1.*nTCFsamples*nmol;
-    NTt[ deltaTCF ]      /= 1.*nTCFsamples*nmol;
-
     // gbr_thb is normalized by gbr, but the number of samples must be the same for each
     for ( i = 0; i < npoints_r*npoints_b; i ++ ){
         // need to be careful here because if gbr[i] == 0, then gbr_thb will also be zero, but the division will be undefined
@@ -366,7 +359,7 @@ void model::write_hbond_prt()
     fprintf( file, "#t (ns) hbond P_R\n");
 
     deltaTCF = 0;
-    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NRt[deltaTCF] );
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NRt[deltaTCF]/NHBt[0] );
     for ( int power = 0; power < 1000; power ++ ){
         if ( pow(10,power*.1) > deltaTCFMax ) break;
         deltaTCF = (int) round(pow(10,power*.1));
@@ -385,7 +378,7 @@ void model::write_hbond_ptt()
     fprintf( file, "#t (ns) hbond P_T\n");
 
     deltaTCF = 0;
-    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NTt[deltaTCF] );
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NTt[deltaTCF]/NHBt[0] );
     for ( int power = 0; power < 1000; power ++ ){
         if ( pow(10,power*.1) > deltaTCFMax ) break;
         deltaTCF = (int) round(pow(10,power*.1));
@@ -404,7 +397,7 @@ void model::write_hbond_phbt()
     fprintf( file, "#t (ns) hbond P_HB\n");
 
     deltaTCF = 0;
-    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NHBt[deltaTCF] );
+    fprintf( file, "%g %g \n", deltaTCF*sampleEvery, NHBt[deltaTCF]/NHBt[0] );
     for ( int power = 0; power < 1000; power ++ ){
         if ( pow(10,power*.1) > deltaTCFMax ) break;
         deltaTCF = (int) round(pow(10,power*.1));

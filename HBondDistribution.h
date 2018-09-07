@@ -18,7 +18,7 @@ class model: public gmx_reader
         float betahbond_min, betahbond_max, betahbond_maxR;
         double *gbr, *pmf;                                      // the probability distribution function
         bool *hbonded,*hbonded_t0,*hbonded_t;                   // boolean array to keep track of hbonds between OHO pairs
-        float *hbondTCF, *NHBt, *NRt, *NTt;                     // hydrogenbond correlation function
+        double *hbondTCF, *NHBt, *NRt, *NTt;                    // hydrogenbond correlation function
         string gbrfname="gbr.dat", pmffname="pmf.dat";          // filenames for outputs
         string tcffname="hbondtcf.dat";                         // more filenames
         string prfname="pr.dat", ptfname="pt.dat", \
