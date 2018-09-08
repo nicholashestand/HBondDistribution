@@ -27,6 +27,8 @@ class model: public gmx_reader
         int deltaTCFMax = 10;
         float *rr, *bb;                                         // r, beta1, and beta 2 for each molecule
         double *gbr_thb;                                        // instantaneous distribution at time t
+        int nTCFsamples=1;                                      // number of times to sample the dynamics
+        float nTCFsamplet=1;                                    // sample the time correlation function every nTCFsmapleEvery ps
 
     
         // Default constructor and destructor

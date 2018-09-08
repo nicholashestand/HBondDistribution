@@ -43,6 +43,8 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
         if ( uParams[i] == "betahbond_min")     betahbond_min   = stof(uValues[i]);
         if ( uParams[i] == "betahbond_maxR")    betahbond_maxR  = stof(uValues[i]);
         if ( uParams[i] == "deltaTCFMax" )      deltaTCFMax     = stoi(uValues[i]);
+        if ( uParams[i] == "nTCFsamples" )      nTCFsamples     = stoi(uValues[i]);
+        if ( uParams[i] == "nTCFsamplet" )      nTCFsamplet     = stof(uValues[i]);
     }
 
     cout << "Set db to: "   << db << endl;
@@ -54,6 +56,8 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
     cout << "Set gbrfname to: " << gbrfname << endl;
     cout << "Set gbrthbfname to: " << gbrthbfname << endl;
     cout << "Set pmffname to: " << pmffname << endl;
+    cout << "Set prfname to: " << prfname << endl;
+    cout << "Set ptfname to: " << ptfname << endl;
     cout << "Set tcffname to: " << tcffname << endl;
     cout << "Set rhbond_max to: " << rhbond_max << endl;
     cout << "Set rhbond_min to: " << rhbond_min << endl;
@@ -62,9 +66,27 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
     cout << "Set betahbond_min to: " << betahbond_min << endl;
     cout << "Set betahbond_maxR to: " << betahbond_maxR << endl;
     cout << "Set deltaTCFMax to: " << deltaTCFMax << endl;
+    cout << "Set nTCFsamples to: " << nTCFsamples << endl;
+    cout << "Set nTCFsamplet to: " << nTCFsamplet << endl;
 
-    //  make sure deltaTCFMax is okay -- adjust if you need to
-    deltaTCFMax = min(deltaTCFMax,nsamples);
+
+    //  make sure deltaTCFMax is okay
+    if ( deltaTCFMax > nsamples ){
+        cout << "WARNING: deltaTCFMax > nsamples. Check input file" << endl;
+        exit(1);
+    }
+    // make sure nTCFsamples is okay
+    if ( nTCFsamples + deltaTCFMax > nsamples ){
+        cout << "WARNING: deltaTCFMax + nTCFsamples > nsamples. Check input file" << endl;
+        exit(1);
+    }
+    // one last check
+    // note nTCFsamplet * nTCFsamples + sampleEvery * deltaTCFMax < sampleEvery*nsamples
+    if ( nTCFsamplet * nTCFsamples + sampleEvery * deltaTCFMax > sampleEvery*nsamples ){
+        cout << "Warning nTCFsamplet * nTFCsamples + sampleEvery * deltaTCFMax > sampleEvery*nsamples. Check input file" << endl;
+    }
+
+
 
     // allocate space for nearest neighbor classifications
     npoints_r    = (int) round( (r_max-r_min)/dr + 1);           // total number of grid points
@@ -257,12 +279,9 @@ void model::remove_hbond_files()
 
 void model::get_hbond_dynamics( int deltaTCF )
 {
-    int sample, nTCFsamples, i;
+    int sample, i, sample0;
     int rnx, bnx, nx, rrnx, bbnx, mol1, mol2;
     float beta, r;
-
-    // Determine number of samples to take
-    nTCFsamples = nsamples - deltaTCF; 
 
     // Initialize variables
     hbondTCF[ deltaTCF ] = 0.;
@@ -273,9 +292,12 @@ void model::get_hbond_dynamics( int deltaTCF )
 
     for ( sample = 0; sample < nTCFsamples; sample ++ )
     {
+        // get frame for t0
+        sample0 = (int) sample*nTCFsamplet/sampleEvery;
+        //cout << sample0*sampleEvery << " : " << (sample0+deltaTCF)*sampleEvery << endl;
         // read hbond info from files
-        read_hbond_t0(sample);
-        read_hbond_t(sample+deltaTCF);
+        read_hbond_t0(sample0);
+        read_hbond_t(sample0+deltaTCF);
 
         // hydrogen bond time correlation function
         // NOTE: this considers hbonds between O-HO pairs -- not between pairs of molecules
