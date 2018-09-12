@@ -253,13 +253,18 @@ void model::determine_hbonds()
     int mol1, mol2, nx, i;
     float r, b;
 
+    // initialize the hbonded array to false
+    for ( nx = 0; nx < nmol*nmol*2 ; nx ++ ) hbonded[ nx ] = false;
+
     for ( mol1 = 0; mol1 < nmol; mol1 ++ ){
         for ( mol2 = 0; mol2 < nmol; mol2 ++ ){
 
             if ( mol1 == mol2 ) continue;
 
             r = get_r( mol1, mol2 );
-
+            // speed it up a little bit -- if we dont care just skip it
+            if ( r > r_max ) continue;
+            
             // check both H for being hbonded
             for ( i = 1; i < 3; i ++ ){
                 b = get_b( mol1, mol2, i);
@@ -279,7 +284,11 @@ void model::determine_gbr()
     for ( mol1 = 0; mol1 < nmol; mol1 ++ ){
         for ( mol2 = 0; mol2 < nmol; mol2 ++ ){
             if ( mol1 == mol2 ) continue;
+            
             r = get_r( mol1, mol2 );
+            // speed it up a little bit -- if we dont care just skip it
+            if ( r > r_max ) continue;
+            
             for ( i = 1; i < 3; i ++ ){
                 b = get_b( mol1, mol2, i);
                 nx = get_nx_from_rb( r, b );
@@ -312,29 +321,33 @@ void model::calculate_dynamicTCFs( int tcfpoint )
 
     // loop over all pairs of molecules
     for ( mol1 = 0; mol1 < nmol; mol1 ++ ){
-        // TODO:: can implement as OMP if desired
         for ( mol2 = 0; mol2 < nmol; mol2 ++ ){
 
             if ( mol1 == mol2 ) continue;
 
             r = get_r( mol1, mol2 );
+            // speed it up a little bit -- if we dont care just skip it
+            if ( r > r_max ) continue;
 
             // hbond correlation function
             for ( h = 1; h < 3; h ++ ){
-                b = get_b( mol1, mol2, h);
                 hbnx = get_hbondnx( mol1, mol2, h );
+                // speed it up a little more -- below will only contribute if hbonded[ hbnx ] is true
+                if ( hbonded[ hbnx ] ){
+                    b = get_b( mol1, mol2, h);
 
-                // correlation functions -- note these are accumulated for each tcfpoint
-                hbondTCF[ tcfpoint ] += hbonded[ hbnx ] * is_hbond( r, b );
-                NHBt[ tcfpoint ]     += hbonded[ hbnx ] * is_hbond( r, b );
-                NRt[ tcfpoint ]      += hbonded[ hbnx ] * is_R_breakage( r, b );
-                NTt[ tcfpoint ]      += hbonded[ hbnx ] * is_T_breakage( r, b );
+                    // correlation functions -- note these are accumulated for each tcfpoint
+                    hbondTCF[ tcfpoint ] += hbonded[ hbnx ] * is_hbond( r, b );
+                    NHBt[ tcfpoint ]     += hbonded[ hbnx ] * is_hbond( r, b );
+                    NRt[ tcfpoint ]      += hbonded[ hbnx ] * is_R_breakage( r, b );
+                    NTt[ tcfpoint ]      += hbonded[ hbnx ] * is_T_breakage( r, b );
 
-                // gbr(thb)
-                nx = get_nx_from_rb( r, b );
-                // note that the index here is a little different because at each time
-                // step there are npoints_r*nponts_b possible entries
-                if ( nx != -1 ) gbr_thb[ tcfpoint*npoints_r*npoints_b + nx ] += hbonded[ hbnx ];
+                    // gbr(thb)
+                    nx = get_nx_from_rb( r, b );
+                    // note that the index here is a little different because at each time
+                    // step there are npoints_r*nponts_b possible entries
+                    if ( nx != -1 ) gbr_thb[ tcfpoint*npoints_r*npoints_b + nx ] += hbonded[ hbnx ];
+                }
             }
 
         }

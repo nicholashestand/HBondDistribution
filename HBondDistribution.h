@@ -18,7 +18,8 @@ class model: public gmx_reader
         double *gbr, *pmf;                                          // the probability distribution function
         bool   *hbonded_t0,*hbonded;                                // boolean array to keep track of hbonds between OHO pairs
         double *hbondTCF, *NHBt, *NRt, *NTt;                        // correlation functions
-        int nsamples, sampleEvery;                                  // sampling variables
+        int nsamples;                                               // sampling variables
+        float sampleEvery;
         int nTCFpoints;                                             // number of TCF points -- calculated internally
         double *gbr_thb;
 
