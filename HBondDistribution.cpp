@@ -6,8 +6,8 @@
 #include <sstream>
 #include <stdlib.h>
 #include <math.h>
-#include <xdrfile/xdrfile.h>
-#include <xdrfile/xdrfile_xtc.h>
+#include <xdrfile.h>
+#include <xdrfile_xtc.h>
 #include <gmx_reader.h>
 #include "HBondDistribution.h"
 
@@ -25,6 +25,7 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
     {
         if ( uParams[i] == "nsamples" )         nsamples        = stoi(uValues[i]);
         if ( uParams[i] == "sampleEvery" )      sampleEvery     = stof(uValues[i]);
+        if ( uParams[i] == "beginTime" )        beginTime       = stof(uValues[i]);
         if ( uParams[i] == "deltaTCFMax" )      deltaTCFMax     = stoi(uValues[i]);
         if ( uParams[i] == "db" )               db              = stof(uValues[i]);
         if ( uParams[i] == "dr" )               dr              = stof(uValues[i]);
@@ -44,6 +45,7 @@ model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
     cout << "Set nsamples to: " << nsamples << endl;
     cout << "Set sampleEvery to: " << sampleEvery << endl;
     cout << "Set deltaTCFMax to: " << deltaTCFMax << endl;
+    cout << "Set beginTime to: " << beginTime << endl;
     cout << "Set db to: "   << db << endl;
     cout << "Set dr to: "   << dr << endl;
     cout << "Set rmin to: " << r_min << endl;
@@ -482,7 +484,7 @@ int main( int argc, char* argv[] )
     for ( currentSample = 0; currentSample < reader.nsamples; currentSample ++ ){
 
         // read frame at t0
-        currentTime = currentSample * reader.sampleEvery;
+        currentTime = currentSample * reader.sampleEvery + reader.beginTime;
         cout << "\rCurrent time: " << currentTime << setprecision(2) << fixed <<  " (ps)";
         cout.flush();
         frameno = reader.get_frame_number( currentTime );
@@ -535,9 +537,11 @@ int main( int argc, char* argv[] )
                 NHB += reader.gbr[ nx ];
             }
 
-            // normalize by the "area" of each gridpoint -- take the center of each r, beta grid point.
-            // now gbr is independent of dr and dbeta
-            reader.gbr[ nx ] /= 2. * PI * rho * r * r * sin( b * PI/180. ) * reader.dr * ( reader.db * PI / 180. );
+            /* normalize by the "area" of each gridpoint -- 
+             * take the center of each r, beta grid point.
+             * now gbr is independent of dr and dbeta */
+            reader.gbr[ nx ] /= 2. * PI * rho * r * r * sin( b * PI/180. ) * \
+                                reader.dr * ( reader.db * PI / 180. );
 
             // note that the PMF is normalized by kT here
             reader.pmf[ nx ] = -1.*log(reader.gbr[nx]);

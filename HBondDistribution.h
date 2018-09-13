@@ -19,7 +19,7 @@ class model: public gmx_reader
         bool   *hbonded_t0,*hbonded;                                // boolean array to keep track of hbonds between OHO pairs
         double *hbondTCF, *NHBt, *NRt, *NTt;                        // correlation functions
         int nsamples;                                               // sampling variables
-        float sampleEvery;
+        float sampleEvery, beginTime=0.;
         int nTCFpoints;                                             // number of TCF points -- calculated internally
         double *gbr_thb;
 
