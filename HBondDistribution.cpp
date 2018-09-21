@@ -13,8 +13,7 @@
 
 #define PI 3.14159265359 
 
-using namespace std;
-
+using namespace std; 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 model::model( string _inpf_ ) : gmx_reader::gmx_reader( _inpf_ )
 // Default constructor
@@ -494,6 +493,11 @@ int main( int argc, char* argv[] )
             exit(EXIT_FAILURE);
         }
         reader.read_frame( frameno );
+        if ( reader.checktime( currentTime ) == false ){
+            cout << "Warning:: checktime failed. gmxtime is: " << reader.gmxtime << endl;
+            cout << "Aborting." << endl;
+            exit(EXIT_FAILURE);
+        }
 
         // calculate average density in molecules/nm
         rho += reader.nmol / (reader.box[0][0] * reader.box[1][1] * reader.box[2][2] ) / reader.nsamples ;
