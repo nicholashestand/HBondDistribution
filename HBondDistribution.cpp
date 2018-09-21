@@ -495,7 +495,7 @@ int main( int argc, char* argv[] )
         reader.read_frame( frameno );
         if ( reader.checktime( currentTime ) == false ){
             cout << endl << "Warning:: checktime failed. gmxtime is: " << reader.gmxtime << endl;
-            cout << "currentTime is" << currentTime << endl;
+            cout << "currentTime is " << currentTime << endl;
             cout << "Aborting." << endl;
             exit(EXIT_FAILURE);
         }
@@ -520,9 +520,9 @@ int main( int argc, char* argv[] )
                 exit(EXIT_FAILURE);
             }
             reader.read_frame( frameno );
-            if ( reader.checktime( currentTime ) == false ){
+            if ( reader.checktime( tcfTime ) == false ){
                 cout << endl << "Warning:: checktime failed. gmxtime is: " << reader.gmxtime << endl;
-                cout << "currentTime is" << currentTime << endl;
+                cout << "tcfTime is " << tcfTime << endl;
                 cout << "Aborting." << endl;
                 exit(EXIT_FAILURE);
             }
