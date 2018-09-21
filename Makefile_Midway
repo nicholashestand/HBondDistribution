@@ -1,0 +1,12 @@
+SOFTDIR = /home/hestand/software/
+LIBDIRS = -L$(SOFTDIR)/lib
+INCDIRS = -I$(SOFTDIR)/include
+
+
+all: HBondDistribution.exe
+
+HBondDistribution.exe: HBondDistribution.cpp
+	g++ HBondDistribution.cpp -o HBondDistribution.exe -lm -lgmx_reader -lxdrfile -std=c++11 -fmax-errors=10 $(LIBDIRS) $(INCDIRS)
+
+clean:
+	rm -f HBondDistribution.exe
