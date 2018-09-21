@@ -494,7 +494,8 @@ int main( int argc, char* argv[] )
         }
         reader.read_frame( frameno );
         if ( reader.checktime( currentTime ) == false ){
-            cout << "Warning:: checktime failed. gmxtime is: " << reader.gmxtime << endl;
+            cout << endl << "Warning:: checktime failed. gmxtime is: " << reader.gmxtime << endl;
+            cout << "currentTime is" << currentTime << endl;
             cout << "Aborting." << endl;
             exit(EXIT_FAILURE);
         }
@@ -512,7 +513,19 @@ int main( int argc, char* argv[] )
             tcfdt = reader.get_tcfdt( tcfpoint ); 
             tcfTime = currentTime + tcfdt;
             frameno = reader.get_frame_number( tcfTime );
+            if ( frameno == -1 ){
+                cout << "Warning:: get_frame_number returned " << frameno << \
+                    " when searching for frame at " << currentTime << \
+                    " (ps).\nCheck input file that nsamples is not too big!" << endl;
+                exit(EXIT_FAILURE);
+            }
             reader.read_frame( frameno );
+            if ( reader.checktime( currentTime ) == false ){
+                cout << endl << "Warning:: checktime failed. gmxtime is: " << reader.gmxtime << endl;
+                cout << "currentTime is" << currentTime << endl;
+                cout << "Aborting." << endl;
+                exit(EXIT_FAILURE);
+            }
             reader.calculate_dynamicTCFs( tcfpoint );
         }
     }   
